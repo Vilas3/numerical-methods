@@ -1,11 +1,14 @@
 import math
 import numpy as np
+from scipy.misc import derivative
+from scipy.interpolate import CubicSpline
 import sympy as sp
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from datetime import datetime
 import matplotlib.pyplot as plt
 from math import exp, sqrt
+from scipy.optimize import minimize_scalar
 
 import pandas as pd 
 
@@ -95,31 +98,56 @@ class CubicSpline:
     
 
     def __call__(self, x_eval):
-        y_eval = []
-        for x in x_eval:
+    # Verifica se x_eval é uma lista ou um único valor
+        if isinstance(x_eval, (list, np.ndarray)):
+            y_eval = []
+            for x in x_eval:
+                idx = 0
+                for i in range(self.n - 1):
+                    if self.x[i] <= x <= self.x[i + 1]:
+                        idx = i
+                        break
+                h = x - self.x[idx]
+                y = self.a[idx] + self.b[idx] * h + self.c[idx] * h ** 2 + self.d[idx] * h ** 3
+                y_eval.append(y)
+            return y_eval
+        else:
+            # Caso seja apenas um valor único
             idx = 0
             for i in range(self.n - 1):
-                if self.x[i] <= x <= self.x[i + 1]:
+                if self.x[i] <= x_eval <= self.x[i + 1]:
                     idx = i
                     break
-            h = x - self.x[idx]
+            h = x_eval - self.x[idx]
             y = self.a[idx] + self.b[idx] * h + self.c[idx] * h ** 2 + self.d[idx] * h ** 3
-            y_eval.append(y)
-        return y_eval
-    
+            return y
       
-class max_seg_deriv:
-    # Function
-
-    y1 = np.cos(x_sp)
-    y2 = np.sin(x_sp)
-    y3 = np.exp(x_sp) 
+class MaxSecondDerivative:
+    def __init__(self, x, y):
+        self.spline = CubicSpline(x, y)
+    
+    def second_derivative(self, x):
+        h = 1e-6  # pequeno incremento para calcular a derivada
+        # Usando o método de diferenciação numérica de segunda ordem
+        f_x_minus_h = self.spline(x - h)
+        f_x = self.spline(x)
+        f_x_plus_h = self.spline(x + h)
+        
+        second_derivative = (f_x_minus_h - 2 * f_x + f_x_plus_h) / (h ** 2)
+        
+        return second_derivative
+    
+    def find_max_second_derivative(self, interval):
+        result = minimize_scalar(lambda x: -self.second_derivative(x), bounds=interval, method='bounded')
+        max_x = result.x
+        max_second_derivative = -result.fun
+        return max_second_derivative
+    
+    
+    
+    
     
 
-    # Criando splines cúbicos para cada conjunto de dados
-    spline1 = CubicSpline(x_sp, y1)
-    spline2 = CubicSpline(x_sp, y2)
-    spline3 = CubicSpline(x_sp, y3)
     
 
       
@@ -180,9 +208,25 @@ res = soma * h * 0.5
 
 print (res)
 
+ # Function
 
+y1 = np.cos(x_sp)
+y2 = np.sin(x_sp)
+y3 = np.exp(x_sp) 
+    
 
-erro_max = ((b-a)^3/12*(n)^2) * max_seg_deriv
+    # Criando splines cúbicos para cada conjunto de dados
+spline1 = MaxSecondDerivative(x_sp, y1)
+spline2 = MaxSecondDerivative(x_sp, y2)
+spline3 = MaxSecondDerivative(x_sp, y3)
+
+max_value1 = spline1.find_max_second_derivative((a,b))
+
+print (max_value1)
+
+erro_max1 = ((b - a) ** 3 / (12 * n ** 2)) * max_value1
+
+print(erro_max1)
 
 
     
